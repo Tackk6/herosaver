@@ -3,14 +3,6 @@
 guitar_to_chart.py — Convert a pitched MIDI (e.g. from Basic Pitch) into a
 Clone Hero 5-fret guitar chart.
 
-Guitar charting differs fundamentally from drums: the 5 frets are NOT pitches,
-they're an abstraction a human designs for playability. We map notes to frets
-by INTERVAL MOTION — when the melody rises we step to a higher fret, when it
-falls we step down, when it repeats we stay. This mirrors what the music is
-doing and plays naturally regardless of absolute pitch.
-
-Guitar .chart lanes (section [ExpertSingle]):
-    0=green 1=red 2=yellow 3=blue 4=orange ; 7=open note (no fret)
 
 USAGE:
     python3 guitar_to_chart.py SONG.mid --title "Song" --artist "Artist"
@@ -49,8 +41,7 @@ def interval_to_fret_step(semitones):
 
 
 # Difficulty design for guitar: thin by time-gap (note density) and, on easier
-# levels, simplify chords to single notes. Guitar has no "backbone voice" like
-# drums, so density control is the main lever.
+# levels, simplify chords to single notes.
 DIFF_SPEC = {
     "Easy":   {"min_gap": 0.30, "max_chord": 1},
     "Medium": {"min_gap": 0.16, "max_chord": 1},
@@ -72,7 +63,6 @@ def parse_pitched_midi(midi_path, track_index=None):
         abs_tick = 0
         for msg in track:
             abs_tick += msg.time
-            # skip the percussion channel; this is a melodic instrument
             if msg.type == "note_on" and msg.velocity > 0:
                 if getattr(msg, "channel", None) == 9:
                     continue
@@ -80,7 +70,7 @@ def parse_pitched_midi(midi_path, track_index=None):
     if not raw:
         return [], tpb
     raw.sort(key=lambda x: x[0])
-    # group simultaneous notes (same tick, or within a tiny window) into chords
+    # group simultaneous notes into chords
     events, cur_tick, cur = [], None, []
     tol = max(1, tpb // 32)
     for tick, pitch in raw:
@@ -96,23 +86,19 @@ def parse_pitched_midi(midi_path, track_index=None):
 
 
 def map_intervals_to_frets(events):
-    """Walk the melody, tracking up/down motion to assign frets.
-    Returns list of (abs_tick, [lanes]). Uses the lowest note of each chord as
-    the melodic anchor; chord width spreads extra notes onto adjacent frets."""
+    """notes track melody, tracking up/down motion to assign frets."""
     out = []
     cur_fret = 2          # start in the middle (yellow)
     prev_anchor = None
     pinned = 0            # how many consecutive notes we've sat at an edge
     for tick, pitches in events:
-        anchor = pitches[0]  # lowest note drives melodic motion
+        anchor = pitches[0]  # lowest note drives motion
         if prev_anchor is None:
             cur_fret = 2
         else:
             step = interval_to_fret_step(anchor - prev_anchor)
             cur_fret += step
-            # If we run off the neck, clamp — but if we KEEP pushing past an
-            # edge, the melody is still moving while the fret can't. Re-anchor
-            # back toward the middle so a long run doesn't flatten to one fret.
+            # Re-anchor back toward the middle so a long run doesn't flatten to one fret.
             if cur_fret < 0:
                 pinned += 1
                 cur_fret = 1 if pinned >= 2 else 0

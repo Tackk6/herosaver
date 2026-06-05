@@ -5,15 +5,6 @@ chart_song.py — One-command Clone Hero charter (ML pipeline).
 Full pipeline from a song file to a ready-to-play chart folder. Supports
 multiple instruments via --instrument:
 
-  DRUMS:
-    song.mp3 -> [Demucs: drums stem] -> [ADTOF: stem->MIDI] -> [drum chart]
-  GUITAR:
-    song.mp3 -> [Demucs: other stem] -> [Basic Pitch: stem->MIDI] -> [guitar chart]
-
-Demucs, Basic Pitch, and the chart writers run in THIS environment.
-ADTOF (drums only) runs in a venv you point at with --adtof-python; it's
-invoked as a subprocess so it can live with its own dependencies.
-
 USAGE:
   # drums
   python3 chart_song.py song.mp3 --instrument drums --title "Song" --artist "Artist" \

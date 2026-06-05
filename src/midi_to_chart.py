@@ -2,10 +2,6 @@
 """
 midi_to_chart.py — Convert a drum MIDI file into a Clone Hero chart.
 
-Unlike audio analysis, this is exact: General MIDI standardizes drum
-note numbers (kick=36, snare=38, hi-hat=42, ...), so each note maps
-deterministically to a Clone Hero lane. No guessing, no classification.
-
 USAGE:
   python3 midi_to_chart.py SONG.mid --title "Song" --artist "Artist"
   python3 midi_to_chart.py SONG.mid --title "Song" --artist "Artist" --pro
@@ -45,12 +41,12 @@ GM_DRUM = {
 }
 CYMBAL_MARKER = {2: 66, 3: 67, 4: 68}
 
-# Per-difficulty design (layer-based reduction, not blind time-gap).
-# Real charts get easier by stripping LAYERS, not by random spacing:
-#   - snare is the protected backbone; it survives at all difficulties
-#   - kick can be grid-thinned on easy levels (busy kicks -> basic beat)
+# Per-difficultyn (layer-based reduction).
+# Real charts get easier by stripping layers:
+#   - snare is the protected backbone
+#   - kick can be grid-thinned on easy levels (basic beat)
 #   - timekeeping (hi-hat/cymbals) is reduced or quantized to main beats
-#   - decoration (toms, fast fills) is simplified first
+#   - (toms, fast fills) is simplified first
 #
 # Fields:
 #   voices         = allowed voices (None = all)
@@ -143,7 +139,7 @@ def list_tracks(midi_path: Path):
 
 
 def thin_for(notes, diff, sec_per_tick, tpb):
-    """Reduce notes for a difficulty by stripping layers, preserving the groove.
+    """Reduce notes for a difficulty by stripping layers, preserving the main beat.
     notes = (abs_tick, voice, lane, is_cymbal), sorted by tick.
 
     Order of operations (each step sees the prior step's output):
@@ -166,7 +162,7 @@ def thin_for(notes, diff, sec_per_tick, tpb):
     if not ns:
         return []
 
-    # 2. collapse fast fills — decoration only, backbone is immune
+    # 2. collapse fast fills
     if collapse_fills:
         deco = [n for n in ns if n[1] not in BACKBONE]
         back = [n for n in ns if n[1] in BACKBONE]
@@ -185,8 +181,8 @@ def thin_for(notes, diff, sec_per_tick, tpb):
         ns = sorted(back + collapsed, key=lambda n: n[0])
 
     # 3. drop colliding kicks (Easy): remove the kick only when it lands with
-    #    another *pad* note (snare/tom) — i.e. a real two-hand hit. A kick that
-    #    merely coincides with a hi-hat is fine and stays (that's normal play).
+    #    another pad note (snare/tom) — i.e. a real two-hand hit. A kick that
+    #    merely coincides with a hi-hat is fine.
     if not keep_kick_with_others:
         by_tick = {}
         for n in ns:
@@ -201,7 +197,7 @@ def thin_for(notes, diff, sec_per_tick, tpb):
             out.extend(moment)
         ns = out
 
-    # 4. quantize hat/cymbal layer to a grid; keep backbone & toms as-is
+    # 4. quantize hat/cymbal layer to a grid
     if hat_grid is not None:
         grid_ticks = hat_grid * tpb
         kept, seen_slots = [], set()
@@ -214,8 +210,8 @@ def thin_for(notes, diff, sec_per_tick, tpb):
             kept.append(n)
         ns = sorted(kept, key=lambda n: n[0])
 
-    # 4b. quantize KICKS to a grid — collapses busy/double kicks into a basic
-    #     one-per-slot beat. Snare is untouched, so the backbone groove stays.
+    # 4b. quantize KICKS to a grid
+    #     one-per-slot beat. Snare is untouched.
     if kick_grid is not None:
         grid_ticks = kick_grid * tpb
         kept, seen_slots = [], set()
@@ -228,8 +224,7 @@ def thin_for(notes, diff, sec_per_tick, tpb):
             kept.append(n)
         ns = sorted(kept, key=lambda n: n[0])
 
-    # 4c. quantize TOMS to a grid — keeps tom fills to basic beats (one tom hit
-    #     per slot) instead of full fast rolls. All tom voices share the grid.
+    # 4c. quantize TOMS to a grid. All tom voices share the grid.
     tom_grid = spec.get("tom_grid")
     if tom_grid is not None:
         grid_ticks = tom_grid * tpb
@@ -316,9 +311,7 @@ def write_chart(notes, tpb, bpm, title, artist, pro, out_dir: Path):
 
 
 def density_to_diff_number(nps):
-    """Map notes-per-second to Clone Hero's 0-6 difficulty intensity scale.
-    Thresholds are rough but reasonable for drums: a sparse pop beat sits
-    low, a dense metal chart sits high."""
+    """Map notes-per-second to Clone Hero's 0-6 difficulty intensity scale."""
     if nps < 2.0:   return 1
     if nps < 3.5:   return 2
     if nps < 5.0:   return 3
@@ -347,8 +340,7 @@ def write_ini(title, artist, pro, out_dir: Path, diff_number=3):
         f.write("delay = 0\n")
         f.write(f"pro_drums = {'True' if pro else 'False'}\n")
         f.write("five_lane_drums = False\n")
-        # Clone Hero difficulty intensity (0-6). -1 means "no chart for that
-        # instrument". We set the drum lines; others stay unset.
+        # Clone Hero difficulty intensity (0-6).
         f.write(f"diff_drums = {diff_number}\n")
         f.write(f"diff_drums_real = {diff_number}\n")
 
