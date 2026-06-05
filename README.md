@@ -37,18 +37,23 @@ Entry points:
 
 ## Requirements
 
+- **Works on Linux, macOS, and Windows.** Use `setup.sh` on Linux/macOS and
+  `setup.ps1` on Windows.
 - **Python 3.10** is strongly recommended for the ADTOF transcription step.
   Newer Python (3.13+) often lacks compatible wheels for the audio/ML stack.
 - An NVIDIA GPU is recommended (Demucs and ADTOF both use it) but CPU works,
   just slower.
-- `ffmpeg` available on your system (Demucs uses it for audio I/O).
+- `ffmpeg` on your PATH (Demucs uses it for audio I/O). Install via your package
+  manager on Linux/macOS, or `winget install Gyan.FFmpeg` on Windows.
 
 ## Installation
 
 ### Quick setup (recommended)
 
-A `setup.sh` automates everything — venv, PyTorch (GPU auto-detected),
-requirements, and ADTOF:
+A setup script automates everything — venv, PyTorch (GPU auto-detected),
+requirements, and ADTOF.
+
+**Linux / macOS:**
 
 ```bash
 git clone https://github.com/Tackk6/herosaver.git
@@ -57,14 +62,37 @@ chmod +x setup.sh
 ./setup.sh                 # auto-detects GPU; use ./setup.sh --cpu to force CPU
 ```
 
-It prints the exact `--adtof-python` path and a ready-to-run example when it
-finishes. If you don't have `python3.10`, run with another interpreter via
-`PYTHON_BIN=python3.11 ./setup.sh` (3.10 is recommended for the ML stack).
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/Tackk6/herosaver.git
+cd herosaver
+# allow the script to run in this session, then run it:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\setup.ps1                # auto-detects GPU; use .\setup.ps1 -Cpu to force CPU
+```
+
+Both print the exact `--adtof-python` path and a ready-to-run example when they
+finish.
+
+**Python 3.10 is strongly recommended** (newer versions like 3.13+ often lack
+compatible PyTorch/ML wheels). If you don't have it:
+
+- *Windows:* install from [python.org](https://www.python.org/downloads/release/python-31011/),
+  then `.\setup.ps1 -PythonBin "C:\path\to\python.exe"` if it isn't your default.
+- *Linux/macOS:* the cleanest way is [uv](https://docs.astral.sh/uv/):
+  `curl -LsSf https://astral.sh/uv/install.sh | sh`, then
+  `uv python install 3.10`, then
+  `PYTHON_BIN="$(uv python find 3.10)" ./setup.sh`.
+
+> **Tip:** install into your home directory, not a size-limited temp location.
+> The PyTorch + CUDA download is several GB and can overflow a small `/tmp`.
 
 Then activate the env before using the tool:
 
 ```bash
-source venv/bin/activate
+source venv/bin/activate              # Linux/macOS
+# .\venv\Scripts\Activate.ps1         # Windows PowerShell
 ```
 
 ### Manual setup
