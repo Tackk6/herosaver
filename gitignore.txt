@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# The ADTOF model repo (cloned separately, not vendored)
+ADTOF-pytorch/
+
+# Working + output artifacts
+_work/
+charts/
+separated/
+
+# Audio / chart files (don't commit copyrighted material)
+*.mp3
+*.wav
+*.ogg
+*.flac
+*.mid
+*.midi
+*.chart
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
