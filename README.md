@@ -1,8 +1,7 @@
 # HeroSaver
 
 Automatically generate **Clone Hero charts** from any song using ML
-transcription. Feed it an audio file; get back a ready-to-play song folder with
-four difficulties (Easy / Medium / Hard / Expert) and an auto-computed
+transcription. four difficulties (Easy / Medium / Hard / Expert) and an auto-computed
 difficulty rating. Supports **drums** and **guitar**.
 
 ## How it works
@@ -25,8 +24,8 @@ GUITAR:
 - **Guitar** uses **[Basic Pitch](https://github.com/spotify/basic-pitch)**
   (Spotify) for polyphonic note detection, then maps notes to the 5 frets by
   **interval motion** — rising melody steps to higher frets, falling steps
-  lower, repeats stay. Frets are an abstraction, not pitches, so this mirrors
-  what the music *does* and plays naturally.
+  lower, repeats stay. Frets are an abstraction, so this mirrors
+  what the music does and plays naturally.
 
 Entry points:
 
@@ -72,7 +71,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\setup.ps1                # auto-detects GPU; use .\setup.ps1 -Cpu to force CPU
 ```
 
-Both print the exact `--adtof-python` path and a ready-to-run example when they
+Both print the exact `--adtof-python` path and an example when they
 finish.
 
 **Python 3.10 is strongly recommended** (newer versions like 3.13+ often lack
@@ -85,8 +84,6 @@ compatible PyTorch/ML wheels). If you don't have it:
   `uv python install 3.10`, then
   `PYTHON_BIN="$(uv python find 3.10)" ./setup.sh`.
 
-> **Tip:** install into your home directory, not a size-limited temp location.
-> The PyTorch + CUDA download is several GB and can overflow a small `/tmp`.
 
 Then activate the env before using the tool:
 
@@ -183,11 +180,10 @@ python src/midi_to_chart.py song.mid --track 3 \
 
 ## Difficulty design
 
-Lower difficulties are made by **stripping layers**, not by randomly dropping
-notes, so each one still feels like the song:
+Lower difficulties are made by stripping layers:
 
 - **Easy** — kick + snare + sparse hi-hats; quick consecutive kicks collapse to a basic
-  one-per-beat pattern; no two-pad collisions.
+  one-per-beat pattern; no doublepedal kicks.
 - **Medium** — adds blue/green toms (kept to basic beats) and a steadier
   hi-hat; kicks thinned to one per half-beat.
 - **Hard** — nearly the full chart with fills slightly simplified.
@@ -212,7 +208,7 @@ intensity scale and written into `song.ini` as `diff_drums`.
 ## Limitations
 
 - Transcription quality depends on the song; dense, heavily distorted, or
-  multi-kit drumming is harder and may need manual cleanup in
+  multi-kit drumming is harder and may need manual work in
   [Moonscraper](https://github.com/FireFox2000000/Moonscraper-Chart-Editor).
 - BPM detection can occasionally land on half/double tempo; pass `--bpm` to fix.
 - Pro-drums cymbal-vs-tom distinctions come from the model and aren't perfect.
