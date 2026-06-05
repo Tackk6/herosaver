@@ -1,35 +1,39 @@
-# Clone Hero Auto-Charter
+# HeroSaver
 
-Automatically generate **Clone Hero drum charts** from any song using ML drum
+Automatically generate **Clone Hero charts** from any song using ML
 transcription. Feed it an audio file; get back a ready-to-play song folder with
-four difficulties (Easy / Medium / Hard / Expert), pro-drums support, and an
-auto-computed difficulty rating.
+four difficulties (Easy / Medium / Hard / Expert) and an auto-computed
+difficulty rating. Supports **drums** and **guitar**.
 
 ## How it works
 
-The pipeline has three stages:
+The pipeline shape is shared; the transcription model and note-mapping differ
+per instrument:
 
 ```
-song.mp3
-  -> [Demucs]   isolate the drum stem from the full mix
-  -> [ADTOF]    ML model transcribes the drum stem into a MIDI of drum hits
-  -> [chart]    MIDI -> notes.chart (4 difficulties) + song.ini + audio
+DRUMS:
+  song.mp3 -> [Demucs: drums stem] -> [ADTOF]       -> drum chart (kick/snare/toms/cymbals)
+GUITAR:
+  song.mp3 -> [Demucs: other stem] -> [Basic Pitch] -> guitar chart (interval-mapped frets)
 ```
 
-- **[Demucs](https://github.com/facebookresearch/demucs)** separates the drums
-  from everything else, so the transcriber hears a clean drum track.
-- **[ADTOF-pytorch](https://github.com/xavriley/ADTOF-pytorch)** is a deep
-  learning automatic-drum-transcription model trained on real (non-synthetic)
-  music. It outputs labeled hits (kick, snare, hi-hat, toms, cymbals).
-- The **chart writer** maps those hits to Clone Hero lanes, builds four
-  difficulties by intelligently stripping layers (not blind thinning), enforces
-  playability rules, and writes a complete song folder.
+- **[Demucs](https://github.com/facebookresearch/demucs)** isolates the target
+  instrument's stem so the transcriber hears a clean signal.
+- **Drums** use **[ADTOF-pytorch](https://github.com/xavriley/ADTOF-pytorch)**,
+  a model trained on real music that outputs labeled drum hits. These map
+  directly to Clone Hero lanes (kick is always lane 0, etc.).
+- **Guitar** uses **[Basic Pitch](https://github.com/spotify/basic-pitch)**
+  (Spotify) for polyphonic note detection, then maps notes to the 5 frets by
+  **interval motion** — rising melody steps to higher frets, falling steps
+  lower, repeats stay. Frets are an abstraction, not pitches, so this mirrors
+  what the music *does* and plays naturally.
 
-Two entry points:
+Entry points:
 
-- **`chart_song.py`** — the full one-command pipeline (audio in, chart out).
-- **`midi_to_chart.py`** — just the MIDI→chart stage, if you already have a
-  drum MIDI (supports `--list-tracks` / `--track` for full-song MIDIs).
+- **`chart_song.py`** — the full one-command pipeline. Pick `--instrument
+  drums` or `--instrument guitar`.
+- **`midi_to_chart.py`** — drum MIDI -> chart (with `--list-tracks`/`--track`).
+- **`guitar_to_chart.py`** — pitched MIDI -> guitar chart.
 
 ## Requirements
 
@@ -47,8 +51,8 @@ A `setup.sh` automates everything — venv, PyTorch (GPU auto-detected),
 requirements, and ADTOF:
 
 ```bash
-git clone https://github.com/<you>/clone-hero-autocharter.git
-cd clone-hero-autocharter
+git clone https://github.com/Tackk6/herosaver.git
+cd herosaver
 chmod +x setup.sh
 ./setup.sh                 # auto-detects GPU; use ./setup.sh --cpu to force CPU
 ```
@@ -69,8 +73,8 @@ If you'd rather do it by hand:
 
 ```bash
 # 1. Clone your repo
-git clone https://github.com/<you>/clone-hero-autocharter.git
-cd clone-hero-autocharter
+git clone https://github.com/Tackk6/herosaver.git
+cd herosaver
 
 # 2. Create a Python 3.10 environment
 python3.10 -m venv venv
@@ -90,7 +94,7 @@ pip install -e ./ADTOF-pytorch
 After this, the `adtof` command lives in your venv. Find its python with:
 
 ```bash
-which python      # -> /path/to/clone-hero-autocharter/venv/bin/python
+which python      # -> /path/to/herosaver/venv/bin/python
 ```
 
 That path is what you pass as `--adtof-python` below (it's just your venv's
@@ -100,23 +104,37 @@ Python, since ADTOF installs into the same environment).
 
 ### Full pipeline (audio → chart)
 
+**Drums:**
+
 ```bash
 python src/chart_song.py path/to/song.mp3 \
-    --title "Song Name" \
-    --artist "Artist Name" \
+    --instrument drums \
+    --title "Song Name" --artist "Artist Name" \
     --adtof-python ./venv/bin/python \
     --pro
 ```
+
+**Guitar:**
+
+```bash
+python src/chart_song.py path/to/song.mp3 \
+    --instrument guitar \
+    --title "Song Name" --artist "Artist Name"
+```
+
+(Guitar uses Basic Pitch, which runs in the main environment, so it needs no
+`--adtof-python`.)
 
 Options:
 
 | Flag | Meaning |
 |------|---------|
+| `--instrument` | `drums` (default) or `guitar` |
 | `--title` | Song title (defaults to filename) |
 | `--artist` | Artist name (defaults to "Unknown") |
 | `--bpm` | Override BPM (otherwise read from the transcribed MIDI) |
-| `--pro` | Generate pro drums (cymbal markers + toms) |
-| `--adtof-python` | Path to the Python where ADTOF is installed (**required**) |
+| `--pro` | Pro drums (cymbal markers + toms) — drums only |
+| `--adtof-python` | Path to the Python where ADTOF is installed (**required for drums**) |
 | `--device` | `cuda` (default) or `cpu` |
 | `--keep-intermediate` | Keep the work folder (stem + MIDI) for debugging |
 
@@ -153,6 +171,11 @@ since 3+ stacked pads are unplayable.
 All of this is tunable in the `DIFF_SPEC` table at the top of
 `src/midi_to_chart.py`.
 
+For **guitar**, difficulties are controlled by note density (minimum gap
+between notes) and chord size — Easy/Medium reduce chords to single notes,
+Hard allows two-note chords, Expert keeps full chords. Tunable in `DIFF_SPEC`
+at the top of `src/guitar_to_chart.py`.
+
 ## Difficulty rating
 
 The chart's notes-per-second (on Expert) is mapped to Clone Hero's 0–6
@@ -165,6 +188,11 @@ intensity scale and written into `song.ini` as `diff_drums`.
   [Moonscraper](https://github.com/FireFox2000000/Moonscraper-Chart-Editor).
 - BPM detection can occasionally land on half/double tempo; pass `--bpm` to fix.
 - Pro-drums cymbal-vs-tom distinctions come from the model and aren't perfect.
+- **Guitar is harder than drums and less polished.** Polyphonic note detection
+  on distorted guitar is imperfect, and the interval-based fret mapping is a
+  heuristic — it produces playable, musically-sensible charts but not what a
+  skilled human charter would craft. Expect to refine guitar charts by hand.
+  Cleanly recorded or less-distorted guitar transcribes noticeably better.
 
 ## Credits
 
