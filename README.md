@@ -186,7 +186,7 @@ python src/midi_to_chart.py song.mid --track 3 \
 Lower difficulties are made by **stripping layers**, not by randomly dropping
 notes, so each one still feels like the song:
 
-- **Easy** — kick + snare + sparse hi-hats; busy kicks collapse to a basic
+- **Easy** — kick + snare + sparse hi-hats; quick consecutive kicks collapse to a basic
   one-per-beat pattern; no two-pad collisions.
 - **Medium** — adds blue/green toms (kept to basic beats) and a steadier
   hi-hat; kicks thinned to one per half-beat.
