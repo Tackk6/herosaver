@@ -1,0 +1,14 @@
+# Core dependencies. Install PyTorch separately first (CUDA-specific):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+# And install ADTOF-pytorch separately for DRUMS (see README):
+#   pip install -e ./ADTOF-pytorch
+
+demucs>=4.0.0
+librosa>=0.10.0
+mido>=1.3.0
+numpy>=1.24.0
+soundfile>=0.12.0
+
+# Guitar transcription (Spotify Basic Pitch). Installs a lightweight runtime
+# (TensorFlowLite on Linux) by default — no full TensorFlow required.
+basic-pitch>=0.4.0
